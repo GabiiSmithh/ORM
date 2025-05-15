@@ -2,23 +2,29 @@ package orm
 
 import (
     "context"
+    "time"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
     "go.mongodb.org/mongo-driver/bson"
-    "time"
+    "go-mongo-orm/config"
 )
 
-func EnsureIndexes() { // função que realiza a migração e criação de índices
+// Criação automática de índices no MongoDB
+func EnsureIndexes() {
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
-    users := getCollection("users") // obtém a coleção de usuários
+    users := config.Client.Database("orm_example").Collection("users")
 
-    // Criar índice único no email
+    // Cria índice único no campo "email"
     indexModel := mongo.IndexModel{
-        Keys:    bson.D{{Key: "email", Value: 1}}, // onde será o índice
-        Options: options.Index().SetUnique(true), // define que será único
+        Keys:    bson.D{{Key: "email", Value: 1}}, // Índice sobre o campo email
+        Options: options.Index().SetUnique(true),  // Define como único
     }
 
-    _, _ = users.Indexes().CreateOne(ctx, indexModel) // cria o índice e retorna o resultado ou erro
+    // Aplica no Mongo
+    _, err := users.Indexes().CreateOne(ctx, indexModel)
+    if err != nil {
+        panic("Erro ao criar índice: " + err.Error())
+    }
 }
