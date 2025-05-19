@@ -7,37 +7,9 @@ import (
 	"go-mongo-orm/orm"
 	"strconv"
 	"strings"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/google/uuid"
 )
-
-// Inserção transacional de Livro
-func InsertLivro(livro models.Livro) func(sessCtx mongo.SessionContext) error {
-	return func(sessCtx mongo.SessionContext) error {
-		_, err := orm.GetCollection(livro).InsertOne(sessCtx, livro)
-		return err
-	}
-}
-
-// Atualização transacional de Livro
-func UpdateLivro(id string, updateData map[string]interface{}) func(sessCtx mongo.SessionContext) error {
-	return func(sessCtx mongo.SessionContext) error {
-		filter := bson.M{"_id": id}
-		update := bson.M{"$set": updateData}
-		_, err := orm.GetCollection(models.Livro{}).UpdateOne(sessCtx, filter, update)
-		return err
-	}
-}
-
-// Remoção transacional de Livro
-func DeleteLivro(id string) func(sessCtx mongo.SessionContext) error {
-	return func(sessCtx mongo.SessionContext) error {
-		filter := bson.M{"_id": id}
-		_, err := orm.GetCollection(models.Livro{}).DeleteOne(sessCtx, filter)
-		return err
-	}
-}
 
 func HandleLivro(op string, reader *bufio.Reader) {
 	switch op {
@@ -131,4 +103,3 @@ func HandleLivro(op string, reader *bufio.Reader) {
 		fmt.Println("Operação inválida")
 	}
 }
-
