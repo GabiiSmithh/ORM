@@ -101,9 +101,12 @@ func handlePessoa(op string, reader *bufio.Reader) {
 		nome, _ := reader.ReadString('\n')
 		nome = strings.TrimSpace(nome)
 
-		filter := map[string]interface{}{"nome": nome}
+		opts := orm.QueryOptions{
+			Filter: map[string]interface{}{"nome": nome},
+		}
+
 		var pessoas []models.Pessoa
-		err := orm.FindMany(models.Pessoa{}, filter, &pessoas)
+		err := orm.FindCustom(models.Pessoa{}, opts, &pessoas)
 		if err != nil {
 			fmt.Println("Erro ao buscar:", err)
 		} else {
@@ -192,9 +195,12 @@ func handleProduto(op string, reader *bufio.Reader) {
 		nome, _ := reader.ReadString('\n')
 		nome = strings.TrimSpace(nome)
 
-		filter := map[string]interface{}{"nome": nome}
+		opts := orm.QueryOptions{
+			Filter: map[string]interface{}{"nome": nome},
+		}
 		var produtos []models.Produto
-		err := orm.FindMany(models.Produto{}, filter, &produtos)
+		err := orm.FindCustom(models.Produto{}, opts, &produtos)
+
 		if err != nil {
 			fmt.Println("Erro ao buscar:", err)
 		} else {
@@ -284,9 +290,12 @@ func handleLivro(op string, reader *bufio.Reader) {
 		nome, _ := reader.ReadString('\n')
 		nome = strings.TrimSpace(nome)
 
-		filter := map[string]interface{}{"nome": nome}
+		opts := orm.QueryOptions{
+			Filter: map[string]interface{}{"titulo": nome},
+		}
 		var livros []models.Livro
-		err := orm.FindMany(models.Livro{}, filter, &livros)
+		err := orm.FindCustom(models.Livro{}, opts, &livros)
+
 		if err != nil {
 			fmt.Println("Erro ao buscar:", err)
 		} else {
