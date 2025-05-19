@@ -19,8 +19,7 @@ ORM/
 ├── orm/
 │   ├── crud.go                 # Funções CRUD genéricas e reutilizáveis para os modelos
 │   └── generator.go            # Criação de índices únicos no banco
-│   └── query.go                # 
-│   └── transaction.go          # 
+│   └── query.go                # Buscas no banco utilizando filtros e ordenação
 ├── utils/                              
 │   └── handle                  # Adicionar dados nos documentos de cada modelo
 │       └── handleLivro.go

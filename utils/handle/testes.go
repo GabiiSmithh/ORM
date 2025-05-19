@@ -1,11 +1,14 @@
 package handle
 
 import (
+	"bufio"
 	"fmt"
 	"go-mongo-orm/models"
 	"go-mongo-orm/orm"
 
 	"github.com/google/uuid"
+	"strings"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Teste 1 – Inserção com tentativa de duplicidade
@@ -74,6 +77,48 @@ func ExemploDelecaoLivro() {
 	} else {
 		fmt.Printf("Livros deletados: %d\n", res.DeletedCount)
 	}
+}
+
+func RodarConsultaAvancadaLivro(r *bufio.Reader) {
+    // --- perguntar filtros ao usuário (exemplo minimalista) ---
+    fmt.Print("Autor? (vazio = ignorar) : ")
+    autor, _ := r.ReadString('\n')
+    autor = strings.TrimSpace(autor)
+
+    fmt.Print("Ano mínimo? (vazio = ignorar) : ")
+    var anoMin int
+    fmt.Fscan(r, &anoMin)
+    r.ReadString('\n') // limpa resto da linha
+
+    // --- montar filtro dinamicamente ---
+    filtro := bson.M{}
+    if autor != "" {
+        filtro["autor"] = autor
+    }
+    if anoMin != 0 {
+        filtro["ano_public"] = bson.M{"$gte": anoMin}
+    }
+
+    // --- opções de ordenação (por título ascendente) e projeção  ---
+    opts := orm.QueryOptions{
+        Filter: filtro,
+        Sort:   bson.D{{Key: "titulo", Value: 1}},
+        // Projection: bson.D{{Key: "titulo", Value: 1}, {Key: "_id", Value: 0}},  // se quiser limitar campos
+    }
+
+    var resultados []models.Livro
+    if err := orm.FindCustom(models.Livro{}, opts, &resultados); err != nil {
+        fmt.Println("Erro na consulta:", err)
+        return
+    }
+
+    fmt.Println("\n--- Resultado ---")
+    for _, l := range resultados {
+        fmt.Printf("%s | %-20s | %d | %s\n", l.ISBN, l.Titulo, l.AnoPublic, l.Autor)
+    }
+    if len(resultados) == 0 {
+        fmt.Println("Nenhum livro encontrado.")
+    }
 }
 
 // Função para rodar todos os testes
