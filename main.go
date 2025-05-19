@@ -18,6 +18,8 @@ func main() {
 
     reader := bufio.NewReader(os.Stdin)
 
+	handle.RodarTestesLivro()
+
     for {
         fmt.Println("\nEscolha o modelo:")
         fmt.Println("1 - Pessoa")

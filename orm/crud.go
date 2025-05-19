@@ -36,31 +36,7 @@ func Insert(document interface{}) (*mongo.InsertOneResult, error) {
 	collection := getCollection(document) // Obtém a coleção correspondente ao tipo do documento
 	return collection.InsertOne(ctx, document) // Realiza a inserção
 }
-/*
-// RETRIEVE: Busca um documento
-func FindMany(model interface{}, filter interface{}, result interface{}) error {
-	coll := getCollection(model) // Obtém a coleção correspondente ao tipo do modelo
 
-	cursor, err := coll.Find(context.TODO(), filter) // Realiza a busca com o filtro
-	if err != nil { // Verifica se houve erro na busca
-		return err
-	}
-	defer cursor.Close(context.TODO())
-
-	slice := reflect.ValueOf(result).Elem() // Obtém o valor do slice passado como resultado
-	elemType := slice.Type().Elem() // Obtém o tipo do elemento do slice
-
-	for cursor.Next(context.TODO()) { // Itera sobre os resultados	
-		elemPtr := reflect.New(elemType)
-		err := cursor.Decode(elemPtr.Interface())
-		if err != nil {
-			return err
-		}
-		slice.Set(reflect.Append(slice, elemPtr.Elem())) // Adiciona o elemento decodificado ao slice
-	}
-
-	return cursor.Err()
-}*/
 // RETRIEVE: Busca um documento a partir de filtros, ordenação e seleção de campos
 func FindCustom(model interface{}, opts QueryOptions, result interface{}) error {
 	coll := getCollection(model) // Obtém a coleção correspondente ao tipo do modelo
