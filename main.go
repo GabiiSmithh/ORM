@@ -42,13 +42,17 @@ func main() {
         opChoice, _ := reader.ReadString('\n')
         opChoice = strings.TrimSpace(opChoice)
 
-switch modelChoice {
-case "1":
-    handle.HandlePessoa(opChoice, reader)
-case "2":
-    handle.HandleProduto(opChoice, reader)
-case "3":
-    handle.HandleLivro(opChoice, reader)
-default:
-    fmt.Println("Opção de modelo inválida")
+		switch modelChoice {
+		case "1":
+			handle.HandlePessoa(opChoice, reader)
+		case "2":
+			handle.HandleProduto(opChoice, reader)
+		case "3":
+			handle.HandleLivro(opChoice, reader)
+		default:
+			fmt.Println("Opção de modelo inválida")
+		}
+
+
+	}
 }
