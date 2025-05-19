@@ -11,7 +11,7 @@ import (
 
 var Client *mongo.Client //Cliente de conexão com o MongoDB
 
-func Connect() {
+func Connect() { // Inicializa a conexão com o MongoDB e armazena no client
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // criação do contexto para 10s
 	defer cancel()
 

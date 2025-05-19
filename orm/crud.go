@@ -14,73 +14,73 @@ import (
 
 // obtém o nome da coleção a partir do nome da struct
 func getCollectionName(doc interface{}) string {
-	t := reflect.TypeOf(doc)
+	t := reflect.TypeOf(doc) // obtém o tipo da struct
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	return strings.ToLower(t.Name()) + "s" // exemplo: Pessoa -> pessoas
+	return strings.ToLower(t.Name()) + "s" // gera o nome da coleção
 }
 
 // acesso à coleção
 func getCollection(doc interface{}) *mongo.Collection {
-	collectionName := getCollectionName(doc)
-	return config.Client.Database("orm_example").Collection(collectionName)
+	collectionName := getCollectionName(doc) // obtém o nome da coleção
+	return config.Client.Database("orm_example").Collection(collectionName) // acessa a coleção em determinado banco
 }
 
-// 🔸 CREATE: Insere um documento no MongoDB
+// CREATE: Insere um documento
 func Insert(document interface{}) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(document)
-	return collection.InsertOne(ctx, document)
+	collection := getCollection(document) // Obtém a coleção correspondente ao tipo do documento
+	return collection.InsertOne(ctx, document) // Realiza a inserção
 }
 
-// 🔸 RETRIEVE: Busca um único documento por filtro
+// RETRIEVE: Busca um documento
 func FindMany(model interface{}, filter interface{}, result interface{}) error {
-	coll := getCollection(model)
+	coll := getCollection(model) // Obtém a coleção correspondente ao tipo do modelo
 
-	cursor, err := coll.Find(context.TODO(), filter)
-	if err != nil {
+	cursor, err := coll.Find(context.TODO(), filter) // Realiza a busca com o filtro
+	if err != nil { // Verifica se houve erro na busca
 		return err
 	}
 	defer cursor.Close(context.TODO())
 
-	slice := reflect.ValueOf(result).Elem()
-	elemType := slice.Type().Elem()
+	slice := reflect.ValueOf(result).Elem() // Obtém o valor do slice passado como resultado
+	elemType := slice.Type().Elem() // Obtém o tipo do elemento do slice
 
-	for cursor.Next(context.TODO()) {
+	for cursor.Next(context.TODO()) { // Itera sobre os resultados	
 		elemPtr := reflect.New(elemType)
 		err := cursor.Decode(elemPtr.Interface())
 		if err != nil {
 			return err
 		}
-		slice.Set(reflect.Append(slice, elemPtr.Elem()))
+		slice.Set(reflect.Append(slice, elemPtr.Elem())) // Adiciona o elemento decodificado ao slice
 	}
 
 	return cursor.Err()
 }
 
-// 🔸 UPDATE: Atualiza campos de um documento com base no filtro
+// UPDATE: Atualiza campos de um documento com base no filtro
 func UpdateOne(docType interface{}, filter interface{}, update interface{}) (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(docType)
-	updateData := bson.M{"$set": update}
+	collection := getCollection(docType) // Obtém a coleção correspondente ao tipo do documento
+	updateData := bson.M{"$set": update} // Cria o documento de atualização
 
 	// Debug temporário
-	fmt.Println("⛏️ Filtro:", filter)
-	fmt.Println("🛠️ Update:", updateData)
+	fmt.Println("Filtro:", filter) // Exibe o filtro
+	fmt.Println("Update:", updateData) // Exibe os dados a serem atualizados
 
-	return collection.UpdateOne(ctx, filter, updateData)
+	return collection.UpdateOne(ctx, filter, updateData) // Realiza a atualização
 }
 
-// 🔸 DELETE: Remove um documento com base no filtro
+// DELETE: Remove um documento com base no filtro
 func DeleteOne(docType interface{}, filter interface{}) (*mongo.DeleteResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(docType)
-	return collection.DeleteOne(ctx, filter)
+	collection := getCollection(docType) // Obtém a coleção correspondente ao tipo do documento
+	return collection.DeleteOne(ctx, filter) // Realiza a remoção
 }

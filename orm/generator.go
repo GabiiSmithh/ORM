@@ -9,22 +9,45 @@ import (
     "go-mongo-orm/config"
 )
 
-// Criação automática de índices no MongoDB
+// Criação de coleções e índices únicos
 func EnsureIndexes() {
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
-    users := config.Client.Database("orm_example").Collection("users")
+    db := config.Client.Database("orm_example")
 
-    // Cria índice único no campo "email"
-    indexModel := mongo.IndexModel{
-        Keys:    bson.D{{Key: "email", Value: 1}}, // Índice sobre o campo email
-        Options: options.Index().SetUnique(true),  // Define como único
+    // Índice único em CPF (pessoas)
+    pessoas := db.Collection("pessoas")
+    pessoaIndex := mongo.IndexModel{ // Cria o modelo do índice
+        Keys: bson.D{{Key: "cpf", Value: 1}},
+        Options: options.Index().SetUnique(true), // Define o índice como único
     }
 
-    // Aplica no Mongo
-    _, err := users.Indexes().CreateOne(ctx, indexModel)
+    // Verificação de erro
+    _, err := pessoas.Indexes().CreateOne(ctx, pessoaIndex)
     if err != nil {
-        panic("Erro ao criar índice: " + err.Error())
+        panic("Erro ao criar índice em pessoas: " + err.Error())
+    }
+
+    // Índice único em ISBN (livros)
+    livros := db.Collection("livros")
+    livroIndex := mongo.IndexModel{
+        Keys: bson.D{{Key: "isbn", Value: 1}},
+        Options: options.Index().SetUnique(true),
+    }
+    _, err = livros.Indexes().CreateOne(ctx, livroIndex)
+    if err != nil {
+        panic("Erro ao criar índice em livros: " + err.Error())
+    }
+
+    // Índice único em código (produtos)
+    produtos := db.Collection("produtos")
+    produtoIndex := mongo.IndexModel{
+        Keys: bson.D{{Key: "codigo", Value: 1}},
+        Options: options.Index().SetUnique(true),
+    }
+    _, err = produtos.Indexes().CreateOne(ctx, produtoIndex)
+    if err != nil {
+        panic("Erro ao criar índice em produtos: " + err.Error())
     }
 }

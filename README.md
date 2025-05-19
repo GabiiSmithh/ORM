@@ -9,21 +9,21 @@
 - O projeto possui a seguinte estrutura de pastas:
 
 ```
-go-mongo-orm/
-├── config/                      # Conexão e configuração do banco
-│   └── config.go
-├── model/                       # Definição pura do modelo User
-│   └── user.go
-├── orm/                         # Lógica de banco: CRUD + geração de índices únicos (migração)
-│   ├── crud.go
-│   └── generator.go
-├── schema/                      # Mapeamento + conversão de tipos
-│   └── user_schema.go
-├── utils/                       
+ORM/
+├── config/
+│   └── config.go         # Configurar a conexão com o banco de dados
+├── model/                # Definição das structs com o mapeamento dos documentos no banco de dados
+│   └── pessoa.go
+│   └── livro.go
+│   └── produto.go
+├── orm/
+│   ├── crud.go           # Funções CRUD genéricas e reutilizáveis para os modelos
+│   └── generator.go      # Criação de índices únicos no banco
+├── utils/                # Funções auxiliares          
 │   └── ...
-├── main.go                      # Arquivo para testar o ORM
-├── go.mod                       # Gerenciador de dependências do Go
-├── go.sum                       # 
+├── main.go
+├── go.mod                # Dependências da lingaugem 
+├── go.sum                # Integridade das dependências (gerado automaticamente)
 ```
 ## Especificidades da linguagem Go
 
@@ -37,7 +37,7 @@ go-mongo-orm/
 - Primeiro, crie o projeto em sua máquina. Para isso, siga os passos abaixo:
   1. Instale o Go em sua máquina (https://golang.org/doc/install)
   2. Instale o MongoDB em sua máquina (https://www.mongodb.com/try/download/community)
-  3. Crie um projeto ou clone este repositório: 
+  3. Crie um projeto ou clone este repositório: (https://github.com/GabiiSmithh/ORM.git)
     ```bash
     git clone
     ```
@@ -55,7 +55,9 @@ go-mongo-orm/
 ## APAGAR DPS
 
 - config.go -> abstrai e centraliza a configuração da conexão do banco de dados. Funcionalidades do go usadas: contexto, modularização, logs, variável global. Essa estrutura permite reaproveitamento da conexão em outros arquivos (crud.go).
-- user.go -> define estrutura do domínio da aplicação (usuário).
-- crud.go -> implemeta operações básicas de CRUD (create, read, update, delete) sobre o User.
+- models -> define estrutura do domínio da aplicação, utiliza tags bson para mapear os dados (representação dos dados do banco em structs).
+- crud.go -> implemeta operações básicas de CRUD (create, read, update, delete) sobre os modelos, utilizando reflect para que seja genérico e reutilizavel para todos os modelos.
 - generator.go -> cria índices únicos no banco. Garante a integridade dos dados, impede duplicidade.
-- user_schema.go -> mapeamento de dados, ou seja, representaçãodos dados do banco em structs. Converte os dados do banco para a aplicação e vice-versa. Possui o modelo lógico (aplicação), o modelo de armazenamento (banco) e a conversão entre eles.
+
+- Contexto serve para controlar a vida útil das operações, nesse caso, delimita q a conexão com o banco deve ser feita em até 10s, se não retorna erro.
+- bson indica como o campo será lido e gravado no banco
