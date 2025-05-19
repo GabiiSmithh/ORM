@@ -55,13 +55,3 @@ ORM/
     ```bash
     go run main.go
     ```
-
-## APAGAR DPS
-
-- config.go -> abstrai e centraliza a configuração da conexão do banco de dados. Funcionalidades do go usadas: contexto, modularização, logs, variável global. Essa estrutura permite reaproveitamento da conexão em outros arquivos (crud.go).
-- models -> define estrutura do domínio da aplicação, utiliza tags bson para mapear os dados (representação dos dados do banco em structs).
-- crud.go -> implemeta operações básicas de CRUD (create, read, update, delete) sobre os modelos, utilizando reflect para que seja genérico e reutilizavel para todos os modelos.
-- generator.go -> cria índices únicos no banco. Garante a integridade dos dados, impede duplicidade.
-
-- Contexto serve para controlar a vida útil das operações, nesse caso, delimita q a conexão com o banco deve ser feita em até 10s, se não retorna erro.
-- bson indica como o campo será lido e gravado no banco
