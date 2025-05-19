@@ -7,8 +7,9 @@ import (
 	"go-mongo-orm/orm"
 	"strconv"
 	"strings"
-
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func HandlePessoa(op string, reader *bufio.Reader) {
@@ -106,4 +107,25 @@ func HandlePessoa(op string, reader *bufio.Reader) {
 	default:
 		fmt.Println("Operação inválida")
 	}
+}
+
+// InserirPessoa insere uma nova pessoa no banco de dados
+func InserirPessoa(sessCtx mongo.SessionContext, client *mongo.Client, nome string) error {
+	collection := client.Database("orm_example").Collection("pessoas")
+	_, err := collection.InsertOne(sessCtx, bson.M{"nome": nome})
+	return err
+}
+
+// AtualizarPessoa atualiza o nome de uma pessoa
+func AtualizarPessoa(sessCtx mongo.SessionContext, client *mongo.Client, id string, nome string) error {
+	collection := client.Database("orm_example").Collection("pessoas")
+	_, err := collection.UpdateOne(sessCtx, bson.M{"_id": id}, bson.M{"$set": bson.M{"nome": nome}})
+	return err
+}
+
+// DeletarPessoa deleta uma pessoa pelo ID
+func DeletarPessoa(sessCtx mongo.SessionContext, client *mongo.Client, id string) error {
+	collection := client.Database("orm_example").Collection("pessoas")
+	_, err := collection.DeleteOne(sessCtx, bson.M{"_id": id})
+	return err
 }
