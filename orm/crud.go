@@ -13,6 +13,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+
+// Exporta o client do MongoDB para uso externo
+func GetMongoClient() *mongo.Client {
+	return config.Client
+}
+
 // obtém o nome da coleção a partir do nome da struct
 func getCollectionName(doc interface{}) string {
 	t := reflect.TypeOf(doc) // obtém o tipo da struct
@@ -23,7 +29,7 @@ func getCollectionName(doc interface{}) string {
 }
 
 // acesso à coleção
-func getCollection(doc interface{}) *mongo.Collection {
+func GetCollection(doc interface{}) *mongo.Collection {
 	collectionName := getCollectionName(doc) // obtém o nome da coleção
 	return config.Client.Database("orm_example").Collection(collectionName) // acessa a coleção em determinado banco
 }
@@ -33,7 +39,7 @@ func Insert(document interface{}) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(document) // Obtém a coleção correspondente ao tipo do documento
+	collection := GetCollection(document) // Obtém a coleção correspondente ao tipo do documento
 	return collection.InsertOne(ctx, document) // Realiza a inserção
 }
 /*
@@ -63,7 +69,7 @@ func FindMany(model interface{}, filter interface{}, result interface{}) error {
 }*/
 // RETRIEVE: Busca um documento a partir de filtros, ordenação e seleção de campos
 func FindCustom(model interface{}, opts QueryOptions, result interface{}) error {
-	coll := getCollection(model) // Obtém a coleção correspondente ao tipo do modelo
+	coll := GetCollection(model) // Obtém a coleção correspondente ao tipo do modelo
 
 	QueryOptions := options.Find()
 	if opts.Projection != nil{
@@ -99,7 +105,7 @@ func UpdateOne(docType interface{}, filter interface{}, update interface{}) (*mo
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(docType) // Obtém a coleção correspondente ao tipo do documento
+	collection := GetCollection(docType) // Obtém a coleção correspondente ao tipo do documento
 	updateData := bson.M{"$set": update} // Cria o documento de atualização
 
 	// Debug temporário
@@ -114,6 +120,6 @@ func DeleteOne(docType interface{}, filter interface{}) (*mongo.DeleteResult, er
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	collection := getCollection(docType) // Obtém a coleção correspondente ao tipo do documento
+	collection := GetCollection(docType) // Obtém a coleção correspondente ao tipo do documento
 	return collection.DeleteOne(ctx, filter) // Realiza a remoção
 }

@@ -7,7 +7,8 @@ import (
 	"go-mongo-orm/orm"
 	"strconv"
 	"strings"
-
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/google/uuid"
 )
 
@@ -108,4 +109,25 @@ func HandleProduto(op string, reader *bufio.Reader) {
 	default:
 		fmt.Println("Operação inválida")
 	}
+}
+
+// InserirProduto insere um novo produto no banco de dados
+func InserirProduto(sessCtx mongo.SessionContext, client *mongo.Client, nome string, preco float64) error {
+	collection := client.Database("orm_example").Collection("produtos")
+	_, err := collection.InsertOne(sessCtx, bson.M{"nome": nome, "preco": preco})
+	return err
+}
+
+// AtualizarProduto atualiza o preço de um produto
+func AtualizarProduto(sessCtx mongo.SessionContext, client *mongo.Client, id string, nome string, preco float64) error {
+	collection := client.Database("orm_example").Collection("produtos")
+	_, err := collection.UpdateOne(sessCtx, bson.M{"_id": id}, bson.M{"$set": bson.M{"nome": nome, "preco": preco}})
+	return err
+}
+
+// DeletarProduto deleta um produto pelo ID
+func DeletarProduto(sessCtx mongo.SessionContext, client *mongo.Client, id string) error {
+	collection := client.Database("orm_example").Collection("produtos")
+	_, err := collection.DeleteOne(sessCtx, bson.M{"_id": id})
+	return err
 }
