@@ -11,19 +11,22 @@
 ```
 ORM/
 ├── config/
-│   └── config.go         # Configurar a conexão com o banco de dados
-├── model/                # Definição das structs com o mapeamento dos documentos no banco de dados
+│   └── config.go               # Configurar a conexão com o banco de dados
+├── model/                      # Definição das structs com o mapeamento dos documentos no banco de dados
 │   └── pessoa.go
 │   └── livro.go
 │   └── produto.go
 ├── orm/
-│   ├── crud.go           # Funções CRUD genéricas e reutilizáveis para os modelos
-│   └── generator.go      # Criação de índices únicos no banco
-├── utils/                # Funções auxiliares          
-│   └── ...
+│   ├── crud.go                 # Funções CRUD genéricas e reutilizáveis para os modelos
+│   └── generator.go            # Criação de índices únicos no banco
+├── utils/                              
+│   └── handle                  # Adicionar dados nos documentos de cada modelo
+│       └── handleLivro.go
+│       └── handlePessoa.go
+│       └── handleProduto.go
 ├── main.go
-├── go.mod                # Dependências da lingaugem 
-├── go.sum                # Integridade das dependências (gerado automaticamente)
+├── go.mod                      # Dependências da lingaugem 
+├── go.sum                      # Integridade das dependências (gerado automaticamente)
 ```
 ## Especificidades da linguagem Go
 
@@ -41,7 +44,7 @@ ORM/
     ```bash
     git clone
     ```
-  4. Instale os drivers do MongoDB:
+  4. Acesse o diretório desse projeto e instale os drivers do MongoDB:
     ```bash
     go get go.mongodb.org/mongo-driver/mongo
     go get go.mongodb.org/mongo-driver/mongo/options
