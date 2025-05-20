@@ -1,87 +1,168 @@
 package main
 
 import (
-	"bufio"
+	"context"
 	"fmt"
 	"go-mongo-orm/config"
-	"go-mongo-orm/orm"
-	"go-mongo-orm/utils/handle"
-	"os"
-	"strings"
+	"go-mongo-orm/framework"
+	"log"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
+// Prompta valores com base em campos definidos no schema
+func PromptValuesFromSchema(fields []string) map[string]interface{} {
+	doc := make(map[string]interface{})
+	for _, field := range fields {
+		val := framework.PromptString(fmt.Sprintf("Valor para '%s': ", field))
+		doc[field] = val
+	}
+	return doc
+}
+
 func main() {
-	config.Connect()
+	mongoURI := "mongodb://localhost:27017"
+	dbName := "orm-test"
+	fmt.Println("Conectando ao MongoDB...")
+	config.Connect(mongoURI, dbName)
 
-	// Chama a criação dos índices (uma vez só, no início)
-	orm.EnsureIndexes()
+	escolha := framework.PromptString("Criar nova coleção (c) ou usar existente (u)? ")
+	var collectionName string
 
-	reader := bufio.NewReader(os.Stdin)
+	if escolha == "c" {
+		collectionName = framework.PromptString("Nome da nova coleção: ")
+		fmt.Println("Informe os campos (nome apenas), um por vez. Deixe vazio para terminar.")
+		var fields []string
+		for {
+			field := framework.PromptString("Campo: ")
+			if field == "" {
+				break
+			}
+			fields = append(fields, field)
+		}
+		primaryKey := framework.PromptString("Informe o nome do campo que será a chave primária: ")
+		err := framework.SaveCollectionSchema(collectionName, fields, primaryKey)
+		if err != nil {
+			log.Fatal("Erro ao salvar esquema:", err)
+		}
+		fmt.Println("Esquema da coleção salvo com sucesso!")
+	} else if escolha == "u" {
+		// Listar coleções existentes
+		schemaColl := config.GetCollection("schemas")
+		cursor, err := schemaColl.Find(context.TODO(), bson.M{})
+		if err != nil {
+			log.Fatal("Erro ao buscar esquemas:", err)
+		}
+		var schemas []bson.M
+		if err = cursor.All(context.TODO(), &schemas); err != nil {
+			log.Fatal("Erro ao decodificar esquemas:", err)
+		}
+		if len(schemas) == 0 {
+			fmt.Println("Nenhuma coleção encontrada. Crie uma nova coleção primeiro.")
+			return
+		}
+		fmt.Println("Coleções disponíveis:")
+		for _, schema := range schemas {
+			fmt.Printf("- %s\n", schema["collection"])
+		}
+		collectionName = framework.PromptString("Nome da coleção existente: ")
+		fields, primaryKey, err := framework.GetCollectionSchema(collectionName)
+		if err != nil {
+			log.Fatal("Erro ao obter esquema da coleção:", err)
+		}
 
-	for {
-		fmt.Println(`
-==== MENU PRINCIPAL ====
-1 - Rodar **consulta avançada** de livros
-2 - Rodar **testes automáticos** de livros
-3 - Abrir menu CRUD interativo (Pessoa / Produto / Livro)
-0 - Sair`)
-		fmt.Print("Opção: ")
-		choice, _ := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
+		// CRUD principal
+		for {
+			fmt.Println("\nEscolha a operação:")
+			fmt.Println("1 - Inserir documento")
+			fmt.Println("2 - Listar documentos")
+			fmt.Println("3 - Atualizar documento por chave primária")
+			fmt.Println("4 - Deletar documento por chave primária")
+			fmt.Println("0 - Sair")
 
-		switch choice {
+			opcao := framework.PromptString("Opção: ")
 
-		// ---------------------------------------------
-		// 1) Consulta avançada de livros
-		// ---------------------------------------------
-		case "1":
-			handle.RodarConsultaAvancadaLivro(reader)
-
-		// ---------------------------------------------
-		// 2) Executa a suíte de testes do módulo Livro
-		// ---------------------------------------------
-		case "2":
-			handle.RodarTestesLivro()
-			// ---------------------------------------------
-			// 3) Abre o antigo menu CRUD completo
-			// ---------------------------------------------
-		case "3":
-			for {
-				fmt.Println("\nEscolha o modelo:")
-				fmt.Println("1 - Pessoa")
-				fmt.Println("2 - Produto")
-				fmt.Println("3 - Livro")
-				fmt.Println("0 - Sair")
-				fmt.Print("Opção: ")
-				modelChoice, _ := reader.ReadString('\n')
-				modelChoice = strings.TrimSpace(modelChoice)
-
-				if modelChoice == "0" {
-					fmt.Println("Saindo...")
-					break
+			switch opcao {
+			case "1":
+				doc := framework.PromptDocumentFields(fields)
+				err := framework.InsertDocument(collectionName, doc)
+				if err != nil {
+					log.Println("Erro ao inserir documento:", err)
+				} else {
+					fmt.Println("Documento inserido com sucesso!")
+				}
+			case "2":
+				docs, err := framework.FindDocuments(collectionName, bson.M{})
+				if err != nil {
+					log.Println("Erro ao buscar documentos:", err)
+					continue
+				}
+				fmt.Printf("Documentos na coleção '%s':\n", collectionName)
+				for i, d := range docs {
+					fmt.Printf("%d) %s=%v, dados=%+v\n", i+1, primaryKey, d[primaryKey], d)
+				}
+			case "3":
+				keyValue := framework.PromptString(fmt.Sprintf("Informe o valor da chave primária (%s) do documento para atualizar: ", primaryKey))
+				fmt.Println("Campos disponíveis para atualização:")
+				for _, field := range fields {
+					fmt.Printf("- %s\n", field)
 				}
 
-				fmt.Println("\nEscolha a operação:")
-				fmt.Println("1 - Criar")
-				fmt.Println("2 - Buscar (Read)")
-				fmt.Println("3 - Atualizar")
-				fmt.Println("4 - Deletar")
-				fmt.Print("Opção: ")
-				opChoice, _ := reader.ReadString('\n')
-				opChoice = strings.TrimSpace(opChoice)
+				updateData := make(map[string]interface{})
+				for {
+					campo := framework.PromptString("Digite o nome do campo a ser alterado (ou pressione Enter para finalizar): ")
+					if campo == "" {
+						break
+					}
 
-				switch modelChoice {
-				case "1":
-					handle.HandlePessoa(opChoice, reader)
-				case "2":
-					handle.HandleProduto(opChoice, reader)
-				case "3":
-					handle.HandleLivro(opChoice, reader)
-				default:
-					fmt.Println("Opção de modelo inválida")
+					// Verifica se o campo é válido
+					isValid := false
+					for _, f := range fields {
+						if f == campo {
+							isValid = true
+							break
+						}
+					}
+					if !isValid {
+						fmt.Println("Campo inválido. Tente novamente.")
+						continue
+					}
+
+					novoValor := framework.PromptString(fmt.Sprintf("Novo valor para '%s': ", campo))
+					updateData[campo] = novoValor
 				}
 
+				if len(updateData) == 0 {
+					fmt.Println("Nenhum campo selecionado para atualização.")
+				} else {
+					err := framework.UpdateDocumentByPrimaryKey(collectionName, primaryKey, keyValue, updateData)
+					if err != nil {
+						log.Println("Erro ao atualizar documento:", err)
+					} else {
+						fmt.Println("Documento atualizado com sucesso!")
+					}
+				}
+
+				if err != nil {
+					log.Println("Erro ao atualizar documento:", err)
+				} else {
+					fmt.Println("Documento atualizado com sucesso!")
+				}
+			case "4":
+				keyValue := framework.PromptString(fmt.Sprintf("Informe o valor da chave primária (%s) do documento para deletar: ", primaryKey))
+				err := framework.DeleteDocumentByPrimaryKey(collectionName, primaryKey, keyValue)
+				if err != nil {
+					log.Println("Erro ao deletar documento:", err)
+				} else {
+					fmt.Println("Documento deletado com sucesso!")
+				}
+			case "0":
+				fmt.Println("Saindo...")
+				return
+			default:
+				fmt.Println("Opção inválida!")
 			}
 		}
+
 	}
 }
