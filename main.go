@@ -6,6 +6,7 @@ import (
 	"go-mongo-orm/config"
 	"go-mongo-orm/framework"
 	"log"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -31,15 +32,31 @@ func main() {
 
 	if escolha == "c" {
 		collectionName = framework.PromptString("Nome da nova coleção: ")
-		fmt.Println("Informe os campos (nome apenas), um por vez. Deixe vazio para terminar.")
+		fmt.Println("Informe os campos no formato: nomeCampo, tipoCampo (string, int, float, date). Deixe vazio para terminar.")
 		var fields []string
 		for {
-			field := framework.PromptString("Campo: ")
-			if field == "" {
+			input := framework.PromptString("Campo: ")
+			if input == "" {
 				break
 			}
-			fields = append(fields, field)
+
+			parts := strings.Split(strings.TrimSpace(input), ",")
+			if len(parts) != 2 {
+				fmt.Println("Formato inválido. Use: nomeCampo, tipoCampo")
+				continue
+			}
+
+			field := strings.TrimSpace(parts[0])
+			fieldType := strings.ToLower(strings.TrimSpace(parts[1]))
+
+			if fieldType != "string" && fieldType != "int" && fieldType != "float" && fieldType != "date" {
+				fmt.Println("Tipo inválido. Tipos permitidos: string, int, float, date")
+				continue
+			}
+
+			fields = append(fields, field+","+fieldType)
 		}
+
 		primaryKey := framework.PromptString("Informe o nome do campo que será a chave primária: ")
 		err := framework.SaveCollectionSchema(collectionName, fields, primaryKey)
 		if err != nil {
@@ -103,8 +120,22 @@ func main() {
 				}
 			case "3":
 				keyValue := framework.PromptString(fmt.Sprintf("Informe o valor da chave primária (%s) do documento para atualizar: ", primaryKey))
+
+				// Extrai apenas os nomes dos campos do schema
+				fieldNames := make([]string, 0)
+				fieldTypes := make(map[string]string)
+				for _, f := range fields {
+					parts := strings.Split(strings.TrimSpace(f), ",")
+					if len(parts) == 2 {
+						name := strings.TrimSpace(parts[0])
+						typ := strings.TrimSpace(parts[1])
+						fieldNames = append(fieldNames, name)
+						fieldTypes[name] = typ
+					}
+				}
+
 				fmt.Println("Campos disponíveis para atualização:")
-				for _, field := range fields {
+				for _, field := range fieldNames {
 					fmt.Printf("- %s\n", field)
 				}
 
@@ -115,21 +146,19 @@ func main() {
 						break
 					}
 
-					// Verifica se o campo é válido
-					isValid := false
-					for _, f := range fields {
-						if f == campo {
-							isValid = true
-							break
-						}
-					}
-					if !isValid {
+					if _, ok := fieldTypes[campo]; !ok {
 						fmt.Println("Campo inválido. Tente novamente.")
 						continue
 					}
 
-					novoValor := framework.PromptString(fmt.Sprintf("Novo valor para '%s': ", campo))
-					updateData[campo] = novoValor
+					valorStr := framework.PromptString(fmt.Sprintf("Novo valor para '%s': ", campo))
+					// Converte o valor com base no tipo definido
+					valorConvertido, err := framework.ConvertValue(valorStr, fieldTypes[campo])
+					if err != nil {
+						fmt.Println("Erro na conversão do valor:", err)
+						continue
+					}
+					updateData[campo] = valorConvertido
 				}
 
 				if len(updateData) == 0 {
@@ -143,11 +172,6 @@ func main() {
 					}
 				}
 
-				if err != nil {
-					log.Println("Erro ao atualizar documento:", err)
-				} else {
-					fmt.Println("Documento atualizado com sucesso!")
-				}
 			case "4":
 				keyValue := framework.PromptString(fmt.Sprintf("Informe o valor da chave primária (%s) do documento para deletar: ", primaryKey))
 				err := framework.DeleteDocumentByPrimaryKey(collectionName, primaryKey, keyValue)
