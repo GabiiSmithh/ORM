@@ -2,99 +2,78 @@ package framework
 
 import (
 	"context"
-
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"fmt"
-
-	"go-mongo-orm/config"
 )
 
-// Create
-func InsertDocument(collectionName string, data map[string]interface{}) error {
-	coll := config.GetCollection(collectionName)   // Obtém a coleção pelo nome
-	_, err := coll.InsertOne(context.TODO(), data) // Insere o documento
-	return err                                     // Caso haja erro
+type Colecao struct { // Colecao representa uma coleção no MongoDB -> Genérica para qualquer coleção
+	Colecao *mongo.Collection
 }
 
-// Retrieve
-func FindDocuments(collectionName string, filter bson.M) ([]bson.M, error) {
-	coll := config.GetCollection(collectionName)
-	cursor, err := coll.Find(context.TODO(), filter) // executa a busca com filtro
+func NovaColecao(db *mongo.Database, nomeColecao string) *Colecao { // Cria a coleção a partir do banco de dados, retorna uma instância de Colecao
+	return &Colecao{
+		Colecao: db.Collection(nomeColecao),
+	}
+}
+
+// CREATE
+func (r *Colecao) Inserir(dado map[string]interface{}) (*mongo.InsertOneResult, error) { // Insere um documento a partir um mapeamento de modelo genérico
+	return r.Colecao.InsertOne(context.Background(), dado)
+}
+
+// BuscarComFiltroOrdenacao permite buscar documentos com filtro e ordenação personalizados
+func (r *Colecao) BuscarComFiltroOrdenacao(filtro map[string]interface{}, ordenacao map[string]int) ([]bson.M, error) {
+	// Transforma os mapas recebidos para tipos BSON compatíveis com o driver do MongoDB
+	filter := bson.M(filtro)
+	sort := bson.D{}
+	for campo, ordem := range ordenacao {
+		sort = append(sort, bson.E{Key: campo, Value: ordem})
+	}
+
+	// Define as opções da consulta com ordenação
+	opcoes := &options.FindOptions{
+		Sort: sort,
+	}
+
+	// Executa a consulta com filtro e opções
+	cursor, err := r.Colecao.Find(context.Background(), filter, opcoes)
 	if err != nil {
 		return nil, err
 	}
+	defer cursor.Close(context.Background())
 
-	var results []bson.M // slice para armazenar os documentos encontrados
-	if err := cursor.All(context.TODO(), &results); err != nil {
-		return nil, err
+	var resultados []bson.M
+	for cursor.Next(context.Background()) {
+		var doc bson.M
+		if err := cursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		resultados = append(resultados, doc)
 	}
-	return results, nil
+
+	return resultados, nil
 }
 
-func UpdateDocumentByPrimaryKey(collectionName, primaryKey, keyValue string, update bson.M) error {
-	coll := config.GetCollection(collectionName)
 
-	filter := bson.M{primaryKey: keyValue} // usa string direto
-	updateDoc := bson.M{"$set": update}
-
-	_, err := coll.UpdateOne(context.TODO(), filter, updateDoc)
-	return err
+// RETRIEBE (ONE)
+func (r *Colecao) BuscarPorID(id primitive.ObjectID) (bson.M, error) { // Busca um documento específico a partir do ID
+	var resultado bson.M
+	err := r.Colecao.FindOne(context.Background(), bson.M{"_id": id}).Decode(&resultado)
+	return resultado, err
 }
 
-func DeleteDocumentByPrimaryKey(collectionName, primaryKey, keyValue string) error {
-	coll := config.GetCollection(collectionName)
-
-	filter := bson.M{primaryKey: keyValue} // usa string direto
-	_, err := coll.DeleteOne(context.TODO(), filter)
-	return err
+// UPDATE
+func (r *Colecao) Atualizar(id primitive.ObjectID, atualizacoes map[string]interface{}) (*mongo.UpdateResult, error) { // Atualiza um documento de acordo com um id
+	return r.Colecao.UpdateOne(
+		context.Background(),
+		bson.M{"_id": id},
+		bson.M{"$set": atualizacoes}, // Atualiza o documento com os dados passados
+	)
 }
 
-// Salva o esquema de uma nova coleção
-func SaveCollectionSchema(collectionName string, fields []string, primaryKey string) error {
-	schemaColl := config.GetCollection("schemas")
-	doc := bson.M{
-		"collection":  collectionName,
-		"fields":      fields,
-		"primary_key": primaryKey,
-	}
-
-	// Remove schema anterior, se existir
-	_, err := schemaColl.DeleteMany(context.TODO(), bson.M{"collection": collectionName})
-	if err != nil {
-		return err
-	}
-	// Insere o novo schema
-	_, err = schemaColl.InsertOne(context.TODO(), doc)
-	if err != nil {
-		return err
-	}
-
-	// Cria índice único no campo da chave primária
-	coll := config.GetCollection(collectionName)
-	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: primaryKey, Value: 1}},
-		Options: options.Index().SetUnique(true),
-	}
-	_, err = coll.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		return fmt.Errorf("erro ao criar índice único na chave primária '%s': %v", primaryKey, err)
-	}
-
-	return nil
-}
-
-// Carrega o esquema e chave primária de uma coleção
-func GetCollectionSchema(collectionName string) ([]string, string, error) {
-	schemaColl := config.GetCollection("schemas")
-	var result struct {
-		Fields     []string `bson:"fields"`
-		PrimaryKey string   `bson:"primary_key"`
-	}
-	err := schemaColl.FindOne(context.TODO(), bson.M{"collection": collectionName}).Decode(&result)
-	if err != nil {
-		return nil, "", err
-	}
-	return result.Fields, result.PrimaryKey, nil
+// DELETE
+func (r *Colecao) Remover(id primitive.ObjectID) (*mongo.DeleteResult, error) { // Remove um documento a partir do ID
+	return r.Colecao.DeleteOne(context.Background(), bson.M{"_id": id})
 }

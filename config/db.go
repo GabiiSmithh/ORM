@@ -1,24 +1,18 @@
 package config
 
 import (
-    "context"
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
-    "log"
+	"context"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var client *mongo.Client // Representação da conexão com o banco de dados
-var database *mongo.Database // Referência ao banco de dados
-
-func Connect(uri string, dbName string) { // Função para conectar ao banco de dados (endereço e nome do banco)
-    var err error
-    client, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(uri)) // Cria a conexão sem timeout
-    if err != nil {
-        log.Fatal(err)
-    }
-    database = client.Database(dbName) // Atribuição do banco de dados á uma variável.
-}
-
-func GetCollection(name string) *mongo.Collection { // Função para retornar a coleção do banco de dados
-    return database.Collection(name)
+func Conectar(uri string) (*mongo.Client, error) {
+	cliente, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri)) // Inicia o cliente MongoDB
+	if err != nil {
+		return nil, err
+	}
+	if err = cliente.Ping(context.Background(), nil); err != nil { // Ping para testar a conexão
+		return nil, err
+	}
+	return cliente, nil
 }
