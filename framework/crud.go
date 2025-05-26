@@ -19,7 +19,7 @@ func NovaColecao(db *mongo.Database, nomeColecao string) *Colecao { // Cria a co
 }
 
 // CREATE
-func (r *Colecao) Inserir(dado map[string]interface{}) (*mongo.InsertOneResult, error) { // Insere um documento a partir um mapeamento de modelo genérico
+func (r *Colecao) Inserir(dado interface{}) (*mongo.InsertOneResult, error){ // Insere um documento a partir um mapeamento de modelo genérico
 	return r.Colecao.InsertOne(context.Background(), dado)
 }
 

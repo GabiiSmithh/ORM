@@ -2,63 +2,81 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"fmt"  
+	"log"   
+	"time" 
 
-	"go-mongo-orm/config"
+	"go-mongo-orm/config"   
 	"go-mongo-orm/framework"
+	"go-mongo-orm/models" 
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func main() {
-	// Configurações do MongoDB
 	uri := "mongodb://localhost:27017"
 	nomeDB := "meudb"
-	nomeColecao := "registros"
+	nomeColecao := "produtos"
 
-	// Conectando ao MongoDB
+	fmt.Println("Iniciando...") // Testando se está tentando conectar
+
+	// Tenta estabelecer conexão com o MongoDB usando o pacote config
 	cliente, err := config.Conectar(uri)
 	if err != nil {
 		log.Fatal("Erro na conexão com o banco:", err)
 	}
-	defer cliente.Disconnect(context.TODO())
 
-	// Acessando a coleção
+	defer cliente.Disconnect(context.TODO())	// Garante que a conexão será fechada no final da função main
+
+	// Seleciona o banco de dados com o nome especificado
 	db := cliente.Database(nomeDB)
+	// Cria o repositório para manipular a coleção de produtos
 	repo := framework.NovaColecao(db, nomeColecao)
 
-
-	// Exemplo de inserção de um documento
-	registro := map[string]interface{}{
-		"nome":  "Gabriela",
-		"curso": "Ciencia da Computação",
-		"idade": 22,
+	// Cria uma nova instância do produto com dados para inserção
+	produto := models.Produto{
+		Nome:        "Teclado Mecânico",                   // Nome do produto
+		Categoria:   "Periféricos",                         // Categoria do produto
+		Preco:       250.75,                                // Preço do produto
+		Disponivel:  true,                                  // Disponibilidade no estoque
+		DataEntrada: primitive.NewDateTimeFromTime(time.Now()), // Data de entrada atual no formato BSON
 	}
-	resultado, err := repo.Inserir(registro)
+
+	// Insere o produto criado na coleção MongoDB usando o método do framework
+	resultado, err := repo.Inserir(produto)
 	if err != nil {
-		log.Fatal("Erro ao inserir:", err)
+		log.Fatal("Erro ao inserir produto:", err)
 	}
-	fmt.Println("ID do documento inserido:", resultado.InsertedID)
+	fmt.Println("ID do produto inserido:", resultado.InsertedID)
 
-	// Exemplo de atualização de um documento recém-inserido
+	// Converte o ID inserido para o tipo ObjectID do MongoDB para manipular depois
 	id := resultado.InsertedID.(primitive.ObjectID)
-	_, err = repo.Atualizar(id, map[string]interface{}{"curso": "Engenharia"})
-	if err != nil {
-		log.Fatal("Erro ao atualizar:", err)
+	atualizacao := map[string]interface{}{ 	// Define um mapa com a atualização desejada (novo preço)
+		"preco": 230.50, // Novo valor do preço para atualizar
 	}
 
-	// Exemplo de busca com filtro e ordenação
+	// Executa a atualização do produto no banco, buscando pelo ID
+	_, err = repo.Atualizar(id, atualizacao)
+	if err != nil {
+		log.Fatal("Erro ao atualizar produto:", err)
+	}
+
+	// Define um filtro para buscar somente produtos que estão disponíveis e na categoria "Periféricos"
 	filtro := map[string]interface{}{
-		"curso": "Engenharia",
+		"categoria":  "Periféricos",
+		"disponivel": true,
 	}
+	// Define a ordenação dos resultados pelo campo preço em ordem decrescente (-1)
 	ordenacao := map[string]int{
-		"idade": -1, // ordem decrescente
+		"preco": -1,
 	}
 
-	documentosFiltrados, err := repo.BuscarComFiltroOrdenacao(filtro, ordenacao)
+	// Busca os produtos na coleção usando filtro e ordenação definidos
+	produtosFiltrados, err := repo.BuscarComFiltroOrdenacao(filtro, ordenacao)
 	if err != nil {
-		log.Fatal("Erro ao buscar com filtro e ordenação:", err)
+		// Se der erro na busca, para a execução e mostra o erro
+		log.Fatal("Erro ao buscar produtos:", err)
 	}
-	fmt.Println("Documentos encontrados com filtro e ordenação:", documentosFiltrados)
+	// Imprime no console os produtos encontrados
+	fmt.Println("Produtos encontrados:", produtosFiltrados)
 }
